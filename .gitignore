@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+**/kaggle.json
+data/
+artifacts/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.venv/
+.ipynb_checkpoints/
+.DS_Store
