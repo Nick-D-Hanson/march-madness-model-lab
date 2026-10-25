@@ -1,46 +1,47 @@
 # March Madness Model Lab
 
-An independent, reproducible exploration of predicting NCAA tournament matchups with pre-game information. This project evolves an earlier exploratory notebook into a transparent modeling pipeline.
+**Can regular-season performance improve NCAA tournament predictions beyond what seeding already tells us?**
 
-**Question:** Can historical regular-season performance and tournament seeds produce calibrated win probabilities that outperform a simple seed-based baseline on *unseen seasons*?
+A reproducible Python modeling lab comparing a seed-only baseline with a matchup model incorporating pre-tournament team statistics. The focus is on a credible evaluation process—not an impressive-looking prediction without a defensible backtest.
 
-## Principles
+**Project type:** Independent model engineering | **Stack:** Python, data pipelines, logistic regression, GitHub Actions
 
-- Predict a binary game outcome, not the winning team's seed.
-- Calculate team features using information available before the tournament.
-- Hold out entire seasons during evaluation to simulate real forecasts.
-- Report accuracy **and** probability quality (log loss and Brier score), against a seed baseline.
-- Keep data downloads, personal paths, notebook outputs, and credentials out of version control.
+## The problem
+
+Tournament seeds are a powerful shorthand for team strength. The practical modeling question is whether historical regular-season performance adds meaningful information when the model is evaluated on **entire seasons it has never seen**.
 
 ## What is implemented
 
-- Deterministic team aggregation from regular-season games, including win rate,
-  points scored, points allowed, and point differential.
-- Matchup feature differences with a real binary winning-team target, independent
-  of the teams' order in the input.
-- Chronological backtesting: for test year `Y`, train on years strictly earlier
-  than `Y`. Pre-tournament statistics from year `Y` are allowed.
-- Two comparable, regularized logistic regressions: seed-only and seed plus
-  regular-season data.
-- Accuracy, Brier score, and log loss by held-out season; equal-season summary.
-- An executable command-line workflow, continuous-integration configuration,
-  and six dependency-free unit tests (using the standard-library test runner).
+- Converts regular-season game results into season-level team features: win rate, scoring, points allowed, and point differential.
+- Builds ordered tournament matchups with an actual **win/loss** prediction target.
+- Trains only on seasons earlier than each held-out test season.
+- Compares seed-only and seed-plus-statistics regularized logistic regression models.
+- Evaluates accuracy **and probability quality** through Brier score and log loss.
+- Includes a CLI, research walkthrough, GitHub Actions, and six passing synthetic-fixture unit tests.
 
-**Honest status:** The six synthetic-fixture tests pass. No numerical
-performance claim is made yet: the complete historical CSVs are not bundled
-and the real-data backtest has not been executed in this repository.
+## Model workflow
 
-## Reproduce the analysis
+```mermaid
+flowchart TD
+  A[Regular-season results] --> C[Pre-tournament team features]
+  B[Tournament seeds] --> C
+  C --> D[Matchup differences]
+  E[Historical outcomes] --> F[Win / loss labels]
+  D --> G[Season-by-season backtest]
+  F --> G
+  G --> H[Seed-only baseline vs. extended model]
+  H --> I[Accuracy, Brier score, log loss]
+```
 
-1. Download the data from the [Kaggle March Machine Learning Mania 2026
-   competition](https://www.kaggle.com/competitions/march-machine-learning-mania-2026/data).
-   Use Kaggle's website or authenticated CLI. Keep personal Kaggle credentials
-   outside this repository.
-2. Place these three men's CSVs in a local `data/` folder:
-   - `MRegularSeasonCompactResults.csv`
-   - `MNCAATourneyCompactResults.csv`
-   - `MNCAATourneySeeds.csv`
-3. From the repository root, run:
+## Results and evidence
+
+**Current status:** The pipeline and six synthetic tests are implemented. **Real historical backtest results have not been executed or published here**, so there is no defensible claim that the extended model outperforms seeding.
+
+This distinction matters: a passing unit test proves selected code behavior, not forecasting skill.
+
+## Run it yourself
+
+Use the [Kaggle March Machine Learning Mania 2026 data](https://www.kaggle.com/competitions/march-machine-learning-mania-2026/data) and place `MRegularSeasonCompactResults.csv`, `MNCAATourneyCompactResults.csv`, and `MNCAATourneySeeds.csv` in a local `data/` directory.
 
 ```bash
 python -m pip install -e .
@@ -48,42 +49,18 @@ python -m unittest discover -s tests -v
 python -m madness_lab.cli --data-dir data --last-n-seasons 5 --output artifacts/backtest.json
 ```
 
-The CLI prints a summary table and optionally writes a per-season JSON report.
-Run the [walkthrough notebook](notebooks/01_rebuild.ipynb) after installation
-to inspect the underlying features and results. Neither private credentials
-nor copyrighted third-party data are tracked in Git.
+See the [walkthrough notebook](notebooks/01_rebuild.ipynb) and [research notes](RESEARCH_NOTES.md) for the implementation and methodological decisions. Historical competition data and credentials are not committed.
 
-## Architecture
+## Engineering decisions
 
-```mermaid
-flowchart TD
-    A["Historical regular-season scores"] --> D["Pre-tournament team features"]
-    B["Tournament seeds"] --> D
-    D --> E["Team A - Team B features"]
-    C["Historical tournament outcomes"] --> E
-    E --> F["Chronological train / held-out seasons"]
-    F --> G["Seed-only baseline"]
-    F --> H["Baseline + season statistics"]
-    G --> I["Accuracy, Brier, log loss"]
-    H --> I
-```
+**Prevent leakage:** The label is never used as a feature; model training uses only earlier seasons. The held-out year's regular-season statistics are legitimate because they exist before tournament play.
 
-The prediction label comes from tournament results; it is never included among
-the model's feature columns. See [research notes](RESEARCH_NOTES.md) for a candid
-review of how the original experiment was redesigned.
+**Benchmark honestly:** A complex model is worthwhile only if it improves on a simple, relevant baseline. Probability metrics assess confidence, not merely winner picks.
 
-## Next experiments
+**Make experiments repeatable:** A command-line runner, stable transformations, tests, and per-season reporting reduce reliance on ad hoc notebook execution.
 
-1. Run the complete historical backtest and publish held-out-year metrics.
-2. Add probability calibration plots and sensitivity tests.
-3. Test opponent-adjusted ratings against the seed-only baseline.
-4. Score arbitrary future matchups from a frozen pre-tournament snapshot, then
-   add a simple bracket explorer.
+## Next milestones
 
-## Provenance
+Run the historical backtest and publish actual performance; evaluate calibration and opponent-adjusted ratings; then explore a matchup and bracket interface driven by frozen pre-tournament snapshots.
 
-The research question originated in a graduate course exploration using
-[Nishaan Amin's March Madness dataset](https://www.kaggle.com/datasets/nishaanamin/march-madness-data).
-The earlier notebook's joins and modeling were not fit for prospective
-prediction. This independent rebuild makes the task reproducible and documents
-the shortcomings transparently. All work here uses public data only.
+The idea began as an earlier graduate exploration. This independently rebuilt implementation corrects the original target/validation approach and intentionally documents unresolved questions.
